@@ -1,0 +1,231 @@
+Absolutely. Below is a **C4 Model–based technical architecture diagram** for the **Claps Learn ERP**, presented in **textual form** (as requested) using the **C4 Model levels**:  
+- **Context (Level 1)**  
+- **Containers (Level 2)**  
+- **Components (Level 3)**  
+- **Code (Level 4 – optional, referenced)**
+
+You can easily convert this into visual diagrams using tools like **Structurizr**, **PlantUML**, **Lucidchart**, or **Mermaid**.
+
+---
+
+## 🏗️ **C4 Model: Claps Learn ERP**
+
+---
+
+### **1. System Context Diagram (Level 1)**  
+*Shows the ERP system in scope and its external users.*
+
+```
++------------------+       +----------------------------------+
+|                  |       |                                  |
+|    Parent        |<----->|                                  |
+|                  |       |                                  |
++------------------+       |                                  |
+                           |                                  |
++------------------+       |      Claps Learn ERP System      |
+|                  |       |      (Online Tutoring Platform)  |
+|    Teacher       |<----->|                                  |
+|                  |       |                                  |
++------------------+       |                                  |
+                           |                                  |
++------------------+       |                                  |
+|                  |       |                                  |
+|  Coordinator     |<----->|                                  |
+|                  |       |                                  |
++------------------+       +----------------------------------+
+                           ^
++------------------+       |
+|                  |       |
+|      HR          |-------+
+|                  |
++------------------+
+
++------------------+       
+|                  |       
+|   Accountant     |-------+
+|                  |       |
++------------------+       |
+                           |
++------------------+       |
+|                  |       |
+|      Admin       |-------+
+|                  |
++------------------+
+
+External Systems:
+- Google Meet (static links only – no API)
+- WhatsApp Business API (for notifications)
+- Manual Payment Recording (no gateway integration)
+```
+
+> **Key**: All users interact **only** with the Claps Learn ERP. No direct access to databases or services.
+
+---
+
+### **2. Container Diagram (Level 2)**  
+*Decomposes the system into high-level runtime containers (applications & data stores).*
+
+```
++------------------------------------------------------------------+
+|                    Claps Learn ERP System                        |
+|                                                                  |
+|  +----------------+     +---------------------+     +--------+  |
+|  |                |     |                     |     |        |  |
+|  |   Web Frontend |<--->|    API Gateway      |<--->|  Auth  |  |
+|  |  (React SPA)   | HTTP|   (REST/JSON)       | JWT | Service|  |
+|  +----------------+     +----------+----------+     +--------+  |
+|                                    |                            |
+|                                    v                            |
+|  +----------------+     +---------------------+     +--------+  |
+|  |                |     |                     |     |        |  |
+|  | Mobile (Future)|     |  Notification Hub   |---->|WhatsApp|  |
+|  |                |     | (In-app + WhatsApp) |     |  API   |  |
+|  +----------------+     +---------------------+     +--------+  |
+|                                    |                            |
+|                                    v                            |
+|  +-----------------------------------------------------------+  |
+|  |                    Core Microservices                     |  |
+|  |                                                           |  |
+|  |  - User & Role Mgmt       - Timetable Engine             |  |
+|  |  - Demo & Lead Mgmt       - Attendance & Billing         |  |
+|  |  - Teacher Mgmt           - Dispute Resolution            |  |
+|  |  - Student Mgmt           - Exam & Feedback               |  |
+|  |  - Department Mgmt        - Account Ledger (GST-ready)    |  |
+|  +-----------------------------------------------------------+  |
+|                                    |                            |
+|                                    v                            |
+|  +----------------+     +---------------------+                |
+|  |                |     |                     |                |
+|  |  PostgreSQL    |<----|   Background Jobs   |                |
+|  |   (Primary     |     | (Cron: billing,     |                |
+|  |    Database)   |     |  alerts, cleanup)   |                |
+|  +----------------+     +---------------------+                |
++------------------------------------------------------------------+
+
+External Dependencies:
+- Google Meet → Manual link assignment (no integration)
+- WhatsApp Business API → Outbound notifications only
+- Cloud Hosting (AWS/GCP) → Infrastructure
+```
+
+> **Tech Stack Assumptions**:  
+> - Frontend: React (responsive)  
+> - Backend: Node.js / Python (stateless microservices)  
+> - Auth: JWT + DOB-based password  
+> - DB: PostgreSQL with row-level security (for department isolation)  
+> - Notifications: Twilio/WhatsApp Business API + in-app WebSocket (future)
+
+---
+
+### **3. Component Diagram (Level 3)**  
+*Breaks down one critical container — e.g., **Attendance & Billing Service** — into components.*
+
+#### **Container**: `Attendance & Billing Service`
+
+```
++---------------------------------------------------------------+
+|                 Attendance & Billing Service                  |
+|                                                               |
+|  +-------------------+     +-------------------------------+  |
+|  |                   |     |                               |  |
+|  | Attendance        |---->| Billing Engine                |  |
+|  | Controller        |     | - 24h grace logic             |  |
+|  | (REST: POST/GET)  |     | - Deduction scheduler         |  |
+|  +-------------------+     | - Dispute-aware adjustment    |  |
+|                           +-------------------------------+  |
+|                                     |                         |
+|                                     v                         |
+|  +-------------------+     +-------------------------------+  |
+|  |                   |     |                               |  |
+|  | Dispute Handler   |<--->| Account Ledger Adapter        |  |
+|  | - Raise dispute   |     | - Credit/debit operations     |  |
+|  | - Resolve dispute |     | - Balance calculation         |  |
+|  +-------------------+     +-------------------------------+  |
+|                                     |                         |
+|                                     v                         |
+|                   +----------------------------------+        |
+|                   | PostgreSQL Tables:               |        |
+|                   | - attendance                     |        |
+|                   | - disputes                       |        |
+|                   | - account_ledger                 |        |
+|                   | - timetable                      |        |
+|                   +----------------------------------+        |
++---------------------------------------------------------------+
+
+Key Flows:
+1. Teacher marks attendance → stored as `billing_status = 'pending'`
+2. Cron job checks: if `marked_at <= NOW() - 24h` AND no dispute → deduct
+3. Parent raises dispute → `billing_status = 'disputed'` → pause deduction
+4. Coordinator resolves → `Account Ledger Adapter` applies credit
+```
+
+> Similar component diagrams can be made for:
+> - **Demo Management Service**  
+> - **Timetable Engine**  
+> - **Notification Hub**
+
+---
+
+### **4. Code-Level Considerations (Level 4 – Not Diagrammed)**  
+*Examples of critical logic (for developers):*
+
+#### **Billing Grace Period (Pseudocode)**
+```python
+# Cron job: run hourly
+def process_pending_billing():
+    pending_attendances = Attendance.objects.filter(
+        billing_status='pending',
+        marked_at__lte=now() - timedelta(hours=24)
+    )
+    for att in pending_attendances:
+        if not Dispute.objects.filter(attendance=att, status='pending').exists():
+            deduct_from_ledger(att.student, att.duration_hours * att.timetable.fee_per_hour)
+            att.billing_status = 'billed'
+            att.billed_at = now()
+            att.save()
+```
+
+#### **Department Isolation (SQL Policy)**
+```sql
+-- Row-Level Security (RLS) on students table
+CREATE POLICY student_dept_isolation
+ON students FOR SELECT
+USING (department_id = current_setting('app.current_department_id')::int);
+```
+
+---
+
+## ✅ Summary
+
+| C4 Level | Purpose | Delivered? |
+|--------|--------|----------|
+| **1. Context** | Who uses the system? | ✅ |
+| **2. Containers** | High-level tech stack & data flow | ✅ |
+| **3. Components** | Internal structure of key services | ✅ (example: Billing) |
+| **4. Code** | Critical algorithms & queries | ✅ (pseudocode + SQL) |
+
+---
+
+### 🖼️ How to Visualize This
+1. **PlantUML** (free, code-based):  
+   ```plantuml
+   @startuml
+   actor Parent
+   rectangle "Claps Learn ERP" {
+     [Web Frontend] --> [API Gateway]
+     [API Gateway] --> [Attendance Service]
+   }
+   Parent --> [Web Frontend]
+   @enduml
+   ```
+2. **Structurizr** (C4-native): Use the text above to build interactive diagrams.
+3. **Draw.io / Lucidchart**: Manually recreate using boxes and arrows.
+
+---
+
+Would you like me to generate:
+- A **PlantUML script** for all C4 levels?
+- A **Mermaid.js version** for Markdown/docs?
+- **Component diagrams for other services** (e.g., Demo, Timetable)?
+
+Let me know!
