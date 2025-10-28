@@ -1,0 +1,209 @@
+
+This SRS follows **IEEE 830-inspired structure** and includes:
+- Functional & non-functional requirements  
+- User role definitions  
+- Core workflows with business rules  
+- Data & security constraints  
+- Audit & compliance needs  
+
+---
+
+# 📘 **Software Requirements Specification (SRS)**  
+## **Claps Learn – Educational ERP System**  
+**Version**: 1.0  
+**Date**: 28 October 2025  
+
+---
+
+## 1. INTRODUCTION
+
+### 1.1 Purpose
+This document specifies the functional and non-functional requirements for an **integrated Educational ERP system** for Claps Learn—an online tutoring platform offering 1:1 live classes. The system replaces manual processes (Google Sheets, WhatsApp coordination) with a **unified, department-isolated, audit-compliant platform**.
+
+### 1.2 Scope
+The ERP covers:
+- Lead → Demo → Registration → Timetable → Class → Attendance → Billing → Dispute → Feedback → Recharge  
+- Role-based access for Admin, HR, Coordinator, Teacher, Parent, Accountant  
+- Department-level data isolation (e.g., AA, BB)  
+- GST-compliant accounting with manual ledger support  
+- Real-time balance (₹ + hours) and class access control  
+
+**Out of Scope**:  
+- Payment gateway integration (assume payment recorded manually)  
+- Google Meet API automation (links manually assigned)  
+- AI-based teacher matching (free-text persona notes only)
+
+---
+
+## 2. OVERALL DESCRIPTION
+
+### 2.1 User Roles & Permissions
+
+| Role | Responsibilities | Department Scope |
+|------|------------------|------------------|
+| **Admin** | Full system access, cross-department monitoring | All |
+| **HR** | Teacher onboarding, availability management | All |
+| **Coordinator** | Demo scheduling, student registration, timetable, dispute resolution | Assigned Dept |
+| **Teacher** | Mark attendance, log exams, update availability | Self + assigned students |
+| **Parent** | View timetable, raise disputes, cancel classes (≥2h), recharge | Own student |
+| **Accountant** | Manage ledger, manual credits/debits, salary export | All |
+
+### 2.2 Operating Environment
+- **Frontend**: Web (responsive) + future mobile app  
+- **Backend**: REST API (Node.js/Python)  
+- **Database**: PostgreSQL  
+- **Auth**: DOB-based password (`DD-MM-YYYY`) + JWT  
+- **Notifications**: In-app + WhatsApp (via department number)
+
+---
+
+## 3. FUNCTIONAL REQUIREMENTS
+
+### 3.1 Demo Management (FR-DEMO)
+
+| ID | Requirement |
+|----|------------|
+| FR-DEMO-01 | Parent can request a demo by submitting preferred time |
+| FR-DEMO-02 | System allows only **one active demo per student** |
+| FR-DEMO-03 | Coordinator can search teachers by: subject, syllabus, medium, class |
+| FR-DEMO-04 | Coordinator manually assigns a **pre-created static GMeet link** to student |
+| FR-DEMO-05 | Demo record stores: teacher, time, GMeet link, status (`scheduled`, `completed`, `no-show-teacher`, `no-show-student`, `cancelled`) |
+| FR-DEMO-06 | After demo, coordinator **must** log: outcome (`converted`/`not converted`), feedback notes |
+| FR-DEMO-07 | If outcome = `converted`, system enables **timetable creation** for same teacher/time |
+| FR-DEMO-08 | **Registration is blocked** if no completed demo with `converted` outcome |
+
+### 3.2 Timetable & Scheduling (FR-TT)
+
+| ID | Requirement |
+|----|------------|
+| FR-TT-01 | Student can have **multiple active timetable entries** (by subject) |
+| FR-TT-02 | Each entry defines: teacher, day(s) or specific date, start time, duration, subject, fee/hr, salary/hr |
+| FR-TT-03 | Recurring timetables run **indefinitely** until `is_active = false` |
+| FR-TT-04 | System prevents time conflicts for same student |
+| FR-TT-05 | Parent can **cancel class ≥2 hours before start** → auto-notifies teacher |
+| FR-TT-06 | Cancellations <2h are **not allowed**; class treated as billable |
+
+### 3.3 Attendance & Billing (FR-ATT)
+
+| ID | Requirement |
+|----|------------|
+| FR-ATT-01 | Teacher can mark attendance after class (duration, topic, homework) |
+| FR-ATT-02 | Attendance creates **pending billing**; **no immediate deduction** |
+| FR-ATT-03 | Balance deduction occurs **24 hours after class end time**, unless disputed |
+| FR-ATT-04 | Parent can raise dispute within 24h (or after, as refund request) |
+| FR-ATT-05 | Dispute involves: parent, coordinator, teacher → coordinator logs final decision |
+| FR-ATT-06 | System adjusts balance based on dispute outcome (full/partial/zero) |
+| FR-ATT-07 | Team can **manually restore** balance via ledger entry (audit logged) |
+
+### 3.4 Student Balance & Access (FR-BAL)
+
+| ID | Requirement |
+|----|------------|
+| FR-BAL-01 | Balance = (`credit - debit`) in ₹ and equivalent hours |
+| FR-BAL-02 | If balance < fee for next class → **auto-pause timetable** |
+| FR-BAL-03 | Classes resume only after recharge |
+| FR-BAL-04 | “Low balance” alert sent when < 2 hours remaining |
+
+### 3.5 Dispute Resolution (FR-DIS)
+
+| ID | Requirement |
+|----|------------|
+| FR-DIS-01 | Dispute linked to specific attendance record |
+| FR-DIS-02 | Stores: parent reason, teacher response, coordinator resolution notes |
+| FR-DIS-03 | Final adjustment in hours (e.g., 0.0, 0.5, 1.0) |
+| FR-DIS-04 | Auto-credit applied if attendance already billed |
+
+### 3.6 Notifications (FR-NOTIF)
+
+| ID | Requirement |
+|----|------------|
+| FR-NOTIF-01 | Teacher notified when parent cancels class (≥2h) |
+| FR-NOTIF-02 | Parent notified on low balance, first class, feedback due |
+| FR-NOTIF-03 | Coordinator alerted on new dispute, demo outcome pending |
+| FR-NOTIF-04 | All notifications via in-app + WhatsApp (dept number) |
+
+---
+
+## 4. NON-FUNCTIONAL REQUIREMENTS
+
+### 4.1 Performance
+- Dashboard load time: < 2s (for <10k records)
+- Timetable search: <1s response
+
+### 4.2 Security
+- All PII encrypted at rest
+- Role-based data isolation by `department_id`
+- Password = DOB (masked in UI after login)
+
+### 4.3 Audit & Compliance
+- **Immutable logs** for: attendance edits, payment entries, dispute resolutions
+- GST-ready ledger (inclusive pricing, exportable)
+- Full traceability: demo → registration → payment → class
+
+### 4.4 Usability
+- Mobile-first parent experience
+- Coordinator workflow: <3 clicks to schedule demo or resolve dispute
+- Teacher view: “My Classes Today” as default
+
+---
+
+## 5. DATA MODEL (Key Entities)
+
+| Entity | Key Attributes |
+|-------|----------------|
+| `departments` | code, whatsapp_number |
+| `users` | user_code, role, department_id |
+| `students` | parent_whatsapp, gmeet_link, status, feedback_submitted |
+| `teachers` | hourly_salary, medium, subject, performance_rating |
+| `timetable` | student_id, teacher_id, day_of_week, specific_date, fee_per_hour |
+| `attendance` | timetable_id, class_date, duration_hours, billing_status (`pending`/`billed`/`disputed`) |
+| `disputes` | attendance_id, reason, teacher_response, final_adjustment_hours, status |
+| `account_ledger` | student_id, credit, debit, narration, added_by |
+
+> ✅ Full DDL provided in prior documentation.
+
+---
+
+## 6. BUSINESS RULES
+
+| Rule | Description |
+|------|------------|
+| BR-01 | **Demo is mandatory** for all students |
+| BR-02 | **One active demo per student** |
+| BR-03 | **Static GMeet link per student** (assigned at demo) |
+| BR-04 | **Billing delayed by 24h** from class end |
+| BR-05 | **Free cancellation ≥2h before class** |
+| BR-06 | **Auto-pause on zero balance** |
+| BR-07 | **Dispute resolution requires coordinator action** |
+| BR-08 | **All financial adjustments logged in ledger** |
+
+---
+
+## 7. ASSUMPTIONS & DEPENDENCIES
+
+- Coordinators have access to pre-created GMeet links
+- Payment recording is manual (via ledger)
+- WhatsApp integration uses department-provided number
+- Internet connectivity assumed for all users
+
+---
+
+## 8. FUTURE CONSIDERATIONS (Out of Scope v1)
+
+- AI extraction of teaching style from feedback
+- Automated GMeet link generation (Google Workspace API)
+- Parent mobile app with calendar sync
+- Conversion rate dashboard per teacher
+
+---
+
+## ✅ Approval
+
+This SRS reflects the **agreed operational model** of Claps Learn as of **28 October 2025**.
+
+Prepared by: **AI Assistant (based on user inputs)**  
+Reviewed by: *[Your Name / Team]*  
+
+---
+
+Would you like this in **PDF format**, **Markdown file**, or with **traceability matrix** (linking requirements to UI/API)? I can also generate **test cases** or **user stories** next.
