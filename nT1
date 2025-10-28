@@ -1,0 +1,379 @@
+# **Claps Learn ERP – Comprehensive Requirements Specification Document**  
+**Version**: 1.1  
+**Date**: 28 October 2025  
+**Prepared For**: Claps Learn Operations & Product Team  
+**Confidential – Internal Use Only**
+
+---
+
+## **Table of Contents**
+
+1. **Introduction**  
+####1.1 Purpose  
+####1.2 Scope  
+####1.3 Definitions, Acronyms, and Abbreviations  
+####1.4 References  
+####1.5 Document Overview  
+
+2. **Overall Description**  
+####2.1 Product Perspective  
+####2.2 User Classes and Characteristics  
+####2.3 Operating Environment  
+####2.4 Design and Implementation Constraints  
+####2.5 Assumptions and Dependencies  
+
+3. **System Features and Requirements**  
+####3.1 User & Role Management  
+####3.2 Department Isolation  
+####3.3 Lead & Demo Management  
+####3.4 Student Registration  
+####3.5 Teacher Onboarding & Profile  
+####3.6 Timetable Management  
+####3.7 Class Execution & GMeet Integration  
+####3.8 Attendance & Billing  
+####3.9 Dispute Resolution  
+####3.10 Student Balance & Access Control  
+####3.11 Payment & Account Ledger  
+####3.12 Exam & Feedback  
+####3.13 Notifications  
+####3.14 Dashboard & Reporting  
+####3.15 Audit & Compliance  
+
+4. **External Interface Requirements**  
+####4.1 User Interfaces (UI)  
+####4.2 Hardware Interfaces  
+####4.3 Software Interfaces  
+####4.4 Communication Interfaces  
+
+5. **Non-Functional Requirements**  
+####5.1 Performance  
+####5.2 Security  
+####5.3 Reliability  
+####5.4 Usability  
+####5.5 Maintainability  
+####5.6 Scalability  
+
+6. **Data Requirements**  
+####6.1 Data Model Summary  
+####6.2 Data Retention Policy  
+####6.3 Backup & Recovery  
+
+7. **Appendices**  
+####A. User Role Permission Matrix  
+####B. Business Rules Catalog  
+####C. Sample Workflows  
+####D. Glossary  
+
+---
+
+## **1. Introduction**
+
+### **1.1 Purpose**  
+This document defines the complete functional, non-functional, and system requirements for the **Claps Learn Educational ERP System**. It serves as the single source of truth for development, testing, and operational alignment.
+
+### **1.2 Scope**  
+The ERP system will manage the end-to-end lifecycle of online tutoring:  
+- **Pre-Sale**: Lead capture → Demo scheduling → Outcome tracking  
+- **Onboarding**: Student/teacher registration, GMeet assignment  
+- **Delivery**: Timetable, class execution, attendance  
+- **Post-Class**: Billing, disputes, exams, feedback  
+- **Finance**: Balance management, manual ledger, GST compliance  
+- **Monitoring**: Role-based dashboards, alerts, audit logs  
+
+**Excluded**:  
+- Payment gateway integration (manual entry assumed)  
+- Automated GMeet creation (links manually assigned)  
+- Marketing or CRM beyond demo tracking  
+
+### **1.3 Definitions, Acronyms, and Abbreviations**  
+
+| Term | Definition |
+|------|-----------|
+| **Demo** | Trial class to evaluate teacher-student fit |
+| **Timetable** | Recurring or one-time class schedule |
+| **Balance** | Student’s available credit in ₹ and equivalent hours |
+| **Department** | Operational unit (e.g., AA, BB) with isolated data and WhatsApp number |
+| **GMeet Link** | Static Google Meet URL assigned per student |
+| **Conversion** | Demo → Paid registration |
+| **Dispute** | Parent challenge to attendance/billing |
+
+### **1.4 References**  
+- Claps Learn Operational Handbook (Internal)  
+- GST Compliance Guidelines (India)  
+- IEEE 830 Standard for SRS  
+
+### **1.5 Document Overview**  
+Sections 2–7 detail system context, user roles, features, interfaces, quality attributes, and data policies.
+
+---
+
+## **2. Overall Description**
+
+### **2.1 Product Perspective**  
+The ERP is a **standalone web application** with future mobile support. It replaces:  
+- Google Sheets (demo tracking)  
+- WhatsApp (scheduling, notifications)  
+- Manual ledgers (payment recording)  
+
+### **2.2 User Classes and Characteristics**  
+
+| Role | Goals | Technical Proficiency |
+|------|------|------------------------|
+| **Parent** | Book demo, view classes, dispute billing, recharge | Low (mobile-first) |
+| **Student** | Join class (via parent) | None (passive user) |
+| **Teacher** | Mark attendance, update availability, log exams | Medium |
+| **Coordinator** | Manage demos, timetables, disputes, students | High |
+| **HR** | Onboard teachers, manage availability | High |
+| **Accountant** | Record payments, export salary, adjust ledger | Medium |
+| **Admin** | Monitor all departments, configure system | Expert |
+
+### **2.3 Operating Environment**  
+- **Frontend**: React.js (responsive web)  
+- **Backend**: REST API (Node.js/Python)  
+- **Database**: PostgreSQL 14+  
+- **Auth**: JWT + DOB-based password (`DD-MM-YYYY`)  
+- **Hosting**: Cloud (AWS/GCP)  
+- **Notifications**: Twilio/WhatsApp Business API + in-app  
+
+### **2.4 Design and Implementation Constraints**  
+- No Google Meet API integration (manual link entry)  
+- Password = student/teacher DOB (10-char string)  
+- All financial data must support GST-inclusive pricing  
+- Department data must be strictly isolated  
+
+### **2.5 Assumptions and Dependencies**  
+- Coordinators have access to a pool of pre-created GMeet links  
+- Internet connectivity available for all users  
+- WhatsApp numbers per department are registered and verified  
+- Payment recording is manual (via ledger entry)
+
+---
+
+## **3. System Features and Requirements**
+
+### **3.1 User & Role Management**  
+- **FR-UM-01**: System supports 6 roles: Admin, HR, Coordinator, Teacher, Parent, Accountant  
+- **FR-UM-02**: Each user has a unique `user_code` (e.g., STU101, TCH205)  
+- **FR-UM-03**: Password = DOB in `DD-MM-YYYY` format (stored hashed)  
+- **FR-UM-04**: Role and department assigned at creation; cannot be changed post-creation  
+- **FR-UM-05**: Inactive users hidden from selection lists  
+
+### **3.2 Department Isolation**  
+- **FR-DI-01**: Every user belongs to exactly one department (`department_id`)  
+- **FR-DI-02**: Non-Admin users can **only view/edit data in their department**  
+- **FR-DI-03**: Each department has a unique WhatsApp number for notifications  
+- **FR-DI-04**: Unlimited departments supported via `departments` table  
+
+### **3.3 Lead & Demo Management**  
+- **FR-DM-01**: Parent submits demo request with preferred time  
+- **FR-DM-02**: Only **one active demo per student** allowed  
+- **FR-DM-03**: Coordinator searches teachers by: subject, syllabus, medium, class  
+- **FR-DM-04**: Coordinator manually enters a **static GMeet link** (pre-created)  
+- **FR-DM-05**: Demo status: `scheduled`, `completed`, `no-show-teacher`, `no-show-student`, `cancelled`  
+- **FR-DM-06**: Post-demo, coordinator **must** record:  
+####- Outcome: `converted` / `not converted`  
+####- Free-text feedback notes  
+- **FR-DM-07**: If `converted`, system enables timetable creation with same teacher/time  
+- **FR-DM-08**: **Registration blocked** without completed demo + `converted` outcome  
+
+### **3.4 Student Registration**  
+- **FR-SR-01**: 22-field form (parent + student details)  
+- **FR-SR-02**: Required: parent WhatsApp, student class/syllabus/medium  
+- **FR-SR-03**: `gmeet_link` assigned at demo, reused for all classes  
+- **FR-SR-04**: Student status: `demo`, `ongoing`, `paused`, `stopped`  
+- **FR-SR-05**: Auto-pause if balance = 0  
+
+### **3.5 Teacher Onboarding & Profile**  
+- **FR-TP-01**: 39-field onboarding form (HR/teacher)  
+- **FR-TP-02**: Captures: qualification, experience, subject, medium, gadgets, internet type  
+- **FR-TP-03**: Free-text “teaching style/persona” notes (HR/coordinator after demo review)  
+- **FR-TP-04**: Availability managed via grid (day + time slot)  
+- **FR-TP-05**: Performance metrics: conversion ratio, complaints, cancellations  
+
+### **3.6 Timetable Management**  
+- **FR-TT-01**: Student can have **multiple timetable entries** (by subject)  
+- **FR-TT-02**: Entry types:  
+####- Recurring: `day_of_week`, `start_time`  
+####- One-time: `specific_date`, `start_time`  
+- **FR-TT-03**: Stores per-subject `fee_per_hour` (GST inclusive) and `salary_per_hour` (pre-GST)  
+- **FR-TT-04**: System prevents time conflicts for same student  
+- **FR-TT-05**: Parent can cancel class **≥2 hours before start**  
+- **FR-TT-06**: Cancellation <2h → not allowed; class billed as attended  
+
+### **3.7 Class Execution & GMeet Integration**  
+- **FR-CE-01**: Each student has **one static GMeet link** for all classes  
+- **FR-CE-02**: Link stored in `students.gmeet_link`  
+- **FR-CE-03**: No daily link generation; same link used indefinitely  
+- **FR-CE-04**: Teacher and parent join same link at scheduled time  
+
+### **3.8 Attendance & Billing**  
+- **FR-AB-01**: Teacher marks attendance post-class (duration, topic, homework)  
+- **FR-AB-02**: Attendance creates **pending billing** (`billing_status = 'pending'`)  
+- **FR-AB-03**: Deduction occurs **24 hours after class end time**  
+- **FR-AB-04**: If dispute raised before 24h → billing paused  
+- **FR-AB-05**: After 24h, dispute = refund request (manual adjustment)  
+- **FR-AB-06**: Team can manually restore balance via ledger  
+
+### **3.9 Dispute Resolution**  
+- **FR-DR-01**: Parent raises dispute on attendance record  
+- **FR-DR-02**: System notifies coordinator + teacher  
+- **FR-DR-03**: Coordinator logs:  
+####- Teacher response (free text)  
+####- Resolution notes  
+####- Final adjustment in hours (0.0–1.0)  
+- **FR-DR-04**: System auto-credits if already billed  
+- **FR-DR-05**: Dispute status: `pending`, `resolved`, `rejected`  
+
+### **3.10 Student Balance & Access Control**  
+- **FR-BA-01**: Balance = sum of ledger credits - debits  
+- **FR-BA-02**: Balance shown in ₹ and hours (using current fee rate)  
+- **FR-BA-03**: If balance < next class fee → **auto-pause timetable**  
+- **FR-BA-04**: Classes resume only after recharge  
+- **FR-BA-05**: “Low balance” alert when < 2 hours remaining  
+
+### **3.11 Payment & Account Ledger**  
+- **FR-PL-01**: Manual ledger entries (credit/debit) by coordinator/accountant  
+- **FR-PL-02**: Fields: date, invoice_no, particulars, credit, debit, narration, payment_origin (`domestic`/`international`)  
+- **FR-PL-03**: GST-compliant (inclusive pricing)  
+- **FR-PL-04**: Exportable to Excel/PDF  
+
+### **3.12 Exam & Feedback**  
+- **FR-EF-01**: Teacher logs exam: subject, date, mode, marks  
+- **FR-EF-02**: Parent submits feedback after 2 weeks of first class  
+- **FR-EF-03**: Feedback: rating (1–5), comments, suggestions  
+- **FR-EF-04**: Dashboard alerts for pending feedback  
+
+### **3.13 Notifications**  
+- **FR-NT-01**: Channels: in-app + WhatsApp (dept number)  
+- **FR-NT-02**: Triggers:  
+####- Parent cancels class → notify teacher  
+####- Low balance → notify parent  
+####- New dispute → notify coordinator + teacher  
+####- Demo outcome pending → notify coordinator  
+- **FR-NT-03**: Monthly statements auto-sent via WhatsApp  
+
+### **3.14 Dashboard & Reporting**  
+- **FR-DH-01**: Role-based views:  
+####- Admin: cross-department monitoring  
+####- Coordinator: student list, dispute queue  
+####- Teacher: “My Classes Today”  
+####- Parent: balance, upcoming class, dispute button  
+- **FR-DH-02**: Admin daily checklist: low balance, first class not started, feedback due  
+- **FR-DH-03**: Exportable reports: salary sheet, monthly statement, conversion rate  
+
+### **3.15 Audit & Compliance**  
+- **FR-AU-01**: Immutable log for:  
+####- Attendance edits  
+####- Payment entries  
+####- Dispute resolutions  
+####- Timetable changes  
+- **FR-AU-02**: All actions logged with: user_id, timestamp, before/after values  
+- **FR-AU-03**: GST-ready financial exports  
+
+---
+
+## **4. External Interface Requirements**
+
+### **4.1 User Interfaces**  
+- Responsive web design (mobile-first for parents)  
+- Role-specific dashboards (see Section 3.14)  
+- Form validation with real-time feedback  
+
+### **4.2 Hardware Interfaces**  
+- None (cloud-hosted SaaS)  
+
+### **4.3 Software Interfaces**  
+- **WhatsApp Business API** for notifications  
+- **Google Workspace** (manual GMeet link assignment only)  
+- **Payment Gateways** (future; not in v1)  
+
+### **4.4 Communication Interfaces**  
+- HTTPS (TLS 1.3+)  
+- RESTful JSON APIs  
+- WebSockets for real-time alerts (future)  
+
+---
+
+## **5. Non-Functional Requirements**
+
+### **5.1 Performance**  
+- Dashboard load: < 2s (10k records)  
+- Search response: < 1s  
+- API uptime: 99.5%  
+
+### **5.2 Security**  
+- RBAC with department isolation  
+- Password = DOB (10-char, hashed)  
+- PII encryption at rest (AES-256)  
+- Session timeout: 30 minutes  
+
+### **5.3 Reliability**  
+- Daily backups  
+- Transactional integrity for financial operations  
+- Idempotent API design  
+
+### **5.4 Usability**  
+- < 3 clicks for key actions (demo schedule, dispute raise)  
+- Contextual help tooltips  
+- Error messages in English + Malayalam (configurable)  
+
+### **5.5 Maintainability**  
+- Modular microservices architecture  
+- Comprehensive logging (structured JSON)  
+- CI/CD pipeline support  
+
+### **5.6 Scalability**  
+- Support 100+ departments  
+- 10k+ students, 1k+ teachers  
+- Horizontal scaling of stateless services  
+
+---
+
+## **6. Data Requirements**
+
+### **6.1 Data Model Summary**  
+- **Core Entities**: departments, users, students, teachers, timetable, attendance, disputes, account_ledger, exams, feedback  
+- **Relationships**:  
+##- 1 Department → Many Users  
+##- 1 Student → Many Timetable entries  
+##- 1 Timetable → Many Attendance records  
+##- 1 Attendance → 0/1 Dispute  
+
+### **6.2 Data Retention Policy**  
+- Financial records: 8 years (GST compliance)  
+- User data: until account deletion + 2 years  
+- Logs: 2 years  
+
+### **6.3 Backup & Recovery**  
+- Daily encrypted backups  
+- Point-in-time recovery (PITR) enabled  
+- Disaster recovery plan (RTO < 4h, RPO < 1h)  
+
+---
+
+## **7. Appendices**
+
+### **A. User Role Permission Matrix**  
+*(See prior detailed matrix — included in full system documentation)*
+
+### **B. Business Rules Catalog**  
+| ID | Rule | Enforcement |
+|----|------|-------------|
+| BR-01 | Demo mandatory for registration | System blocks registration without converted demo |
+| BR-02 | One active demo per student | System disables new demo request if active demo exists |
+| BR-03 | Static GMeet per student | `gmeet_link` set once at demo, reused forever |
+| BR-04 | 24h billing grace | Cron job processes pending billing at T+24h |
+| BR-05 | Free cancellation ≥2h | UI disables cancel button <2h before class |
+| BR-06 | Auto-pause on zero balance | Pre-class check disables access if balance < fee |
+| BR-07 | Dispute requires coordinator | Only coordinator can change dispute status |
+| BR-08 | All adjustments logged | Ledger entry required for balance changes |
+
+### **C. Sample Workflows**  
+**Demo → Registration**:  
+Parent → Request Demo → Coordinator Assigns Teacher + GMeet → Demo Held → Coordinator Logs Outcome = Converted → Timetable Created → Payment Recorded → Classes Begin  
+
+**Dispute Flow**:  
+Parent Raises Dispute → Notify Coordinator + Teacher → Coordinator Logs Resolution → System Adjusts Balance → Close Dispute  
+
+### **D. Glossary**  
+*(See Section 1.3)*
