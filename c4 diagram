@@ -205,27 +205,3 @@ USING (department_id = current_setting('app.current_department_id')::int);
 | **4. Code** | Critical algorithms & queries | ✅ (pseudocode + SQL) |
 
 ---
-
-### 🖼️ How to Visualize This
-1. **PlantUML** (free, code-based):  
-   ```plantuml
-   @startuml
-   actor Parent
-   rectangle "Claps Learn ERP" {
-     [Web Frontend] --> [API Gateway]
-     [API Gateway] --> [Attendance Service]
-   }
-   Parent --> [Web Frontend]
-   @enduml
-   ```
-2. **Structurizr** (C4-native): Use the text above to build interactive diagrams.
-3. **Draw.io / Lucidchart**: Manually recreate using boxes and arrows.
-
----
-
-Would you like me to generate:
-- A **PlantUML script** for all C4 levels?
-- A **Mermaid.js version** for Markdown/docs?
-- **Component diagrams for other services** (e.g., Demo, Timetable)?
-
-Let me know!
